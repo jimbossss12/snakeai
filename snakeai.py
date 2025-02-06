@@ -670,10 +670,10 @@ def save_checkpoint(agent: DQNAgent, episode: int, score: float, path: str) -> N
 def load_checkpoint(agent: DQNAgent, path: str) -> None:
     """Load model checkpoint if available."""
     if os.path.exists(path):
-        # Allow safe globals: PrioritizedReplayMemory, Transition, _reconstruct, ndarray, and numpy.dtype.
+        # Allow safe globals: PrioritizedReplayMemory, Transition, _reconstruct, ndarray, dtype, and numpy.dtypes.Float32DType.
         from numpy._core.multiarray import _reconstruct
         from numpy import ndarray, dtype
-        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition, _reconstruct, ndarray, dtype]):
+        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition, _reconstruct, ndarray, dtype, np.dtypes.Float32DType]):
             checkpoint = torch.load(path, map_location=device)
         agent.policy_net.load_state_dict(checkpoint["policy_state"])
         agent.target_net.load_state_dict(checkpoint["target_state"])
