@@ -674,9 +674,10 @@ def save_checkpoint(agent: DQNAgent, episode: int, score: float, path: str) -> N
     }, path)
 
 def load_checkpoint(agent: DQNAgent, path: str) -> None:
-    """Load model checkpoint if available."""
     if os.path.exists(path):
-        checkpoint = torch.load(path, map_location=device)
+        # Salli mukautetun luokan lataaminen turvallisesti.
+        with torch.serialization.safe_globals([PrioritizedReplayMemory]):
+            checkpoint = torch.load(path, map_location=device)
         agent.policy_net.load_state_dict(checkpoint["policy_state"])
         agent.target_net.load_state_dict(checkpoint["target_state"])
         agent.optimizer.load_state_dict(checkpoint["optimizer_state"])
@@ -685,6 +686,7 @@ def load_checkpoint(agent: DQNAgent, path: str) -> None:
         logging.info(f"Checkpoint loaded: {path}")
     else:
         logging.info("No checkpoint found; using default initialization.")
+
 
 # --- Training Thread ---
 def training_thread():
