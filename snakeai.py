@@ -66,13 +66,13 @@ default_params = {
     "grad_clip": 1.0,
     "max_steps": 500,
     "obstacle_start": 1,  # Episode from which obstacles start
-    # New obstacle parameters:
-    "obstacle_spawn_prob": 0.5,    # Probability for an obstacle to spawn
-    "obstacle_base_count": 40,       # Base allowed number of obstacles
-    "obstacle_base_lifetime": 15,   # Base lifetime (seconds)
-    "obstacle_lifetime_increment": 5,  # Additional lifetime per phase (seconds)
-    "obstacle_phase_interval": 1,  # Seconds before phase increases
-    "checkpoint_interval": 50,      # Checkpoint every n episodes
+    # Obstacle parameters:
+    "obstacle_spawn_prob": 0.5,
+    "obstacle_base_count": 40,
+    "obstacle_base_lifetime": 15,
+    "obstacle_lifetime_increment": 5,
+    "obstacle_phase_interval": 1,
+    "checkpoint_interval": 50,
 }
 
 # --- Global Training Statistics ---
@@ -96,17 +96,15 @@ CONFIG = {
     "grad_clip": default_params["grad_clip"],
     "max_steps": default_params["max_steps"],
     "obstacle_start": default_params["obstacle_start"],
-    # Obstacle parameters:
     "obstacle_spawn_prob": default_params["obstacle_spawn_prob"],
     "obstacle_base_count": default_params["obstacle_base_count"],
     "obstacle_base_lifetime": default_params["obstacle_base_lifetime"],
     "obstacle_lifetime_increment": default_params["obstacle_lifetime_increment"],
     "obstacle_phase_interval": default_params["obstacle_phase_interval"],
     "checkpoint_interval": default_params["checkpoint_interval"],
-    # Also include:
     "seed": default_params["seed"],
     "log_dir": default_params["log_dir"],
-    # We'll add "hidden_sizes" for the network; default value below.
+    # Network hidden sizes; can be adapted based on system performance.
     "hidden_sizes": [256, 128],
 }
 
@@ -118,8 +116,8 @@ logging.info(f"Using device: {device}")
 # --- System Benchmark Functions ---
 def system_benchmark() -> float:
     """
-    Run a simple compute-intensive loop to estimate the system's performance.
-    Returns the time in seconds to complete the loop.
+    Run a compute-intensive loop to estimate system performance.
+    Returns the time (in seconds) for the loop.
     """
     start = time.time()
     s = 0.0
@@ -130,13 +128,12 @@ def system_benchmark() -> float:
 
 def adapt_to_system() -> Dict[str, any]:
     """
-    Based on a simple benchmark, adapt key configuration parameters so that
-    the program can run well even on low-power systems.
+    Adapt key parameters based on system performance.
     """
     bench = system_benchmark()
     logging.info(f"System benchmark: {bench:.3f} seconds for test loop")
     if bench > 0.5:
-        # Low-power system detected.
+        # Low-power system: reduce FPS, grid size, and network complexity.
         adapted = {
             "fps": 5,
             "grid_width": 20,
@@ -144,7 +141,6 @@ def adapt_to_system() -> Dict[str, any]:
             "hidden_sizes": [128, 64],
         }
     else:
-        # Otherwise, use default (high-performance) settings.
         adapted = {
             "fps": 10,
             "grid_width": 30,
@@ -153,12 +149,11 @@ def adapt_to_system() -> Dict[str, any]:
         }
     return adapted
 
-# Adapt the configuration based on system performance.
 adapted_config = adapt_to_system()
 with config_lock:
     CONFIG.update(adapted_config)
 
-# --- Game Constants (update from CONFIG) ---
+# --- Game Constants (from CONFIG) ---
 CELL_SIZE = CONFIG["cell_size"]
 GRID_WIDTH = CONFIG["grid_width"]
 GRID_HEIGHT = CONFIG["grid_height"]
@@ -607,7 +602,7 @@ class Game:
             if steps >= CONFIG["max_steps"]:
                 done = True
 
-            # Spawn obstacles if past obstacle_start episode and after obstacle_phase_interval
+            # Spawn obstacles if episode is past obstacle_start and after obstacle_phase_interval.
             if episode >= CONFIG["obstacle_start"] and current_time > CONFIG["obstacle_phase_interval"]:
                 phase = min(int((current_time - CONFIG["obstacle_phase_interval"]) // CONFIG["obstacle_phase_interval"]), 4)
                 lifetime = CONFIG["obstacle_base_lifetime"] + CONFIG["obstacle_lifetime_increment"] * phase
@@ -674,9 +669,11 @@ def save_checkpoint(agent: DQNAgent, episode: int, score: float, path: str) -> N
     }, path)
 
 def load_checkpoint(agent: DQNAgent, path: str) -> None:
+    """Load model checkpoint if available."""
     if os.path.exists(path):
-        # Salli sekä PrioritizedReplayMemory että Transition ladattaviksi
-        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition]):
+        # Allow safe globals: PrioritizedReplayMemory, Transition, and _reconstruct from numpy.
+        from numpy._core.multiarray import _reconstruct
+        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition, _reconstruct]):
             checkpoint = torch.load(path, map_location=device)
         agent.policy_net.load_state_dict(checkpoint["policy_state"])
         agent.target_net.load_state_dict(checkpoint["target_state"])
@@ -686,7 +683,6 @@ def load_checkpoint(agent: DQNAgent, path: str) -> None:
         logging.info(f"Checkpoint loaded: {path}")
     else:
         logging.info("No checkpoint found; using default initialization.")
-
 
 # --- Training Thread ---
 def training_thread():
@@ -715,7 +711,7 @@ def training_thread():
     best_score = -np.inf
     episode = 0
 
-    logging.info("Training started. Close the Pygame window or press Ctrl+C to stop.")
+    logging.info("Training started. Close the Pygame window or press CTRL+C to stop.")
     try:
         while True:
             with config_lock:
@@ -1024,14 +1020,14 @@ def main_gui():
 
 # --- Main Entry Point ---
 if __name__ == "__main__":
-    # Tarkistetaan, käynnistetäänkö etätilassa (remote mode) komentorivin parametrilla.
+    # Check if running in remote mode using the command-line parameter.
     if '--remote' in sys.argv:
-        # Käynnistetään ensin Flask-palvelin etäohjausta varten.
+        # Start the Flask server for remote control.
         remote_thread = threading.Thread(target=run_remote_server, daemon=True)
         remote_thread.start()
         logging.info("Remote control server started on port 5000.")
-        # Käynnistetään koulutus (ilman graafista käyttöliittymää).
+        # Start training without the GUI.
         training_thread()
     else:
-        # Käynnistetään GUI-tilassa.
+        # Start in GUI mode.
         main_gui()
