@@ -675,8 +675,8 @@ def save_checkpoint(agent: DQNAgent, episode: int, score: float, path: str) -> N
 
 def load_checkpoint(agent: DQNAgent, path: str) -> None:
     if os.path.exists(path):
-        # Salli mukautetun luokan lataaminen turvallisesti.
-        with torch.serialization.safe_globals([PrioritizedReplayMemory]):
+        # Salli sekä PrioritizedReplayMemory että Transition ladattaviksi
+        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition]):
             checkpoint = torch.load(path, map_location=device)
         agent.policy_net.load_state_dict(checkpoint["policy_state"])
         agent.target_net.load_state_dict(checkpoint["target_state"])
