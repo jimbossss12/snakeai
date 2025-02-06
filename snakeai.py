@@ -133,7 +133,6 @@ def adapt_to_system() -> Dict[str, any]:
     bench = system_benchmark()
     logging.info(f"System benchmark: {bench:.3f} seconds for test loop")
     if bench > 0.5:
-        # Low-power system: reduce FPS, grid size, and network complexity.
         adapted = {
             "fps": 5,
             "grid_width": 20,
@@ -671,9 +670,10 @@ def save_checkpoint(agent: DQNAgent, episode: int, score: float, path: str) -> N
 def load_checkpoint(agent: DQNAgent, path: str) -> None:
     """Load model checkpoint if available."""
     if os.path.exists(path):
-        # Allow safe globals: PrioritizedReplayMemory, Transition, and _reconstruct from numpy.
+        # Salli safe globals: PrioritizedReplayMemory, Transition, numpy._core.multiarray._reconstruct, and numpy.ndarray.
         from numpy._core.multiarray import _reconstruct
-        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition, _reconstruct]):
+        from numpy import ndarray
+        with torch.serialization.safe_globals([PrioritizedReplayMemory, Transition, _reconstruct, ndarray]):
             checkpoint = torch.load(path, map_location=device)
         agent.policy_net.load_state_dict(checkpoint["policy_state"])
         agent.target_net.load_state_dict(checkpoint["target_state"])
@@ -1020,14 +1020,10 @@ def main_gui():
 
 # --- Main Entry Point ---
 if __name__ == "__main__":
-    # Check if running in remote mode using the command-line parameter.
     if '--remote' in sys.argv:
-        # Start the Flask server for remote control.
         remote_thread = threading.Thread(target=run_remote_server, daemon=True)
         remote_thread.start()
         logging.info("Remote control server started on port 5000.")
-        # Start training without the GUI.
         training_thread()
     else:
-        # Start in GUI mode.
         main_gui()
