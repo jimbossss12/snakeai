@@ -64,14 +64,14 @@ default_params = {
     "beta_start": 0.4,
     "beta_end": 1.0,
     "grad_clip": 1.0,
-    "max_steps": 300,
-    "obstacle_start": 500,  # Episode from which obstacles start
+    "max_steps": 500,
+    "obstacle_start": 1,  # Episode from which obstacles start
     # New obstacle parameters:
-    "obstacle_spawn_prob": 0.05,    # Probability for an obstacle to spawn
-    "obstacle_base_count": 3,       # Base allowed number of obstacles
+    "obstacle_spawn_prob": 0.5,    # Probability for an obstacle to spawn
+    "obstacle_base_count": 40,       # Base allowed number of obstacles
     "obstacle_base_lifetime": 15,   # Base lifetime (seconds)
     "obstacle_lifetime_increment": 5,  # Additional lifetime per phase (seconds)
-    "obstacle_phase_interval": 30,  # Seconds before phase increases
+    "obstacle_phase_interval": 1,  # Seconds before phase increases
     "checkpoint_interval": 50,      # Checkpoint every n episodes
 }
 
